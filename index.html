@@ -161,7 +161,7 @@
   <button type="button" id="print">Print</button>
   <button type="button" id="clear">Clear</button>
 </div>
-<p class="hint">Type 1&ndash;9 to fill a square, arrow keys to move, Backspace or 0 to clear. Leave it blank to print an empty grid.</p>
+<p class="hint">Type 1&ndash;9 to fill a square, Space to skip one, arrow keys to move, Backspace to undo, Delete or 0 to clear. Leave it blank to print an empty grid.</p>
 
 <div class="sheet">
   <input class="title" id="title" type="text" placeholder="Title (optional)" aria-label="Title" autocomplete="off">
@@ -174,6 +174,8 @@
   var grid = document.getElementById('grid');
   var title = document.getElementById('title');
   var cells = [];
+  var typedFrom = null;   // index of the square just typed into, until the next key or click
+  var typedRun = 0;       // how many squares in a row were typed, ending at typedFrom
 
   for (var i = 0; i < 81; i++) {
     var input = document.createElement('input');
@@ -217,25 +219,58 @@
     if (!cell.classList.contains('cell')) return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     var i = Number(cell.dataset.index);
-    var row = Math.floor(i / 9), col = i % 9;
+    var from = typedFrom, run = typedRun;
+    typedFrom = null;
+    typedRun = 0;
+    // True when the cursor is still where the last entry left it
+    var justTyped = from !== null && i === Math.min(from + 1, 80);
+
+    function entered() {        // record an entry at this square and advance
+      typedRun = (justTyped ? run : 0) + 1;
+      typedFrom = i;
+      focusCell(i + 1);         // wraps to the next row; stays put on the last square
+    }
 
     switch (e.key) {
-      case 'ArrowUp':    if (row > 0) focusCell(i - 9); break;
-      case 'ArrowDown':  if (row < 8) focusCell(i + 9); break;
-      case 'ArrowLeft':  if (col > 0) focusCell(i - 1); break;
-      case 'ArrowRight': if (col < 8) focusCell(i + 1); break;
+      // Up/down wrap within the column; left/right wrap in reading order
+      case 'ArrowUp':    focusCell((i + 72) % 81); break;
+      case 'ArrowDown':  focusCell((i + 9) % 81); break;
+      case 'ArrowLeft':  focusCell((i + 80) % 81); break;
+      case 'ArrowRight': focusCell((i + 1) % 81); break;
+      // Straight after typing a number the cursor has already advanced, so
+      // go below the square that was filled in; otherwise just move down
+      case 'Enter':
+        focusCell(((justTyped ? from : i) + 9) % 81);
+        break;
       case 'Backspace':
+        if (justTyped) {
+          // Undo the entry just made, and keep undoing back along a run of entries
+          cells[from].value = '';
+          save();
+          focusCell(from);
+          if (run > 1) { typedFrom = from - 1; typedRun = run - 1; }
+        } else if (cell.value) {
+          cell.value = '';      // populated: clear it and stay put
+          save();
+        } else if (i > 0) {
+          focusCell(i - 1);
+        }
+        break;
       case 'Delete':
       case '0':
-      case ' ':
         cell.value = '';
         save();
+        break;
+      case ' ':                 // "types" a blank: empty the square and advance
+        cell.value = '';
+        save();
+        entered();
         break;
       default:
         if (/^[1-9]$/.test(e.key)) {
           cell.value = e.key;   // overwrite whatever was there
           save();
-          focusCell(i + 1);     // advance, wrapping to the next row
+          entered();
         } else if (e.key.length !== 1) {
           return;               // Tab, Enter etc. keep default behaviour
         }
@@ -250,8 +285,14 @@
     var match = cell.value.match(/[1-9]/);
     cell.value = match ? match[0] : '';
     save();
-    if (match) focusCell(Number(cell.dataset.index) + 1);
+    if (match) {
+      typedFrom = Number(cell.dataset.index);
+      typedRun = 1;
+      focusCell(typedFrom + 1);
+    }
   });
+
+  grid.addEventListener('pointerdown', function () { typedFrom = null; typedRun = 0; });
 
   title.addEventListener('input', save);
 
