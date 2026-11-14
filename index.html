@@ -159,6 +159,9 @@
 
 <div class="toolbar">
   <button type="button" id="print">Print</button>
+  <button type="button" id="copy-link">Copy link</button>
+  <button type="button" id="copy-text">Copy text</button>
+  <button type="button" id="paste">Paste</button>
   <button type="button" id="clear">Clear</button>
 </div>
 <p class="hint">Type 1&ndash;9 to fill a square, Space to skip one, arrow keys to move, Backspace to undo, Delete or 0 to clear. Leave it blank to print an empty grid.</p>
@@ -197,9 +200,62 @@
         cells: cells.map(function (c) { return c.value; })
       }));
     } catch (e) { /* storage unavailable: carry on without saving */ }
+    // Keep the address bar in step, so it can be bookmarked or shared at any time
+    try {
+      var h = hashText();
+      history.replaceState(null, '', h ? '#' + h : location.pathname + location.search);
+    } catch (e) { /* some contexts don't allow it: the Copy link button still works */ }
+  }
+
+  // The grid as 81 characters, row by row, with 0 for an empty square
+  function puzzleText() {
+    return cells.map(function (c) { return c.value || '0'; }).join('');
+  }
+
+  // e.g. "p=530070000...&t=My%20puzzle"; empty when there is nothing to share
+  function hashText() {
+    var parts = [];
+    var p = puzzleText();
+    if (/[1-9]/.test(p)) parts.push('p=' + p);
+    if (title.value) parts.push('t=' + encodeURIComponent(title.value));
+    return parts.join('&');
+  }
+
+  function linkText() {
+    var h = hashText();
+    return location.href.split('#')[0] + (h ? '#' + h : '');
+  }
+
+  // Accepts a link from this page, or 81 characters (0 or . for empty squares,
+  // whitespace ignored). Returns { cells, title } or null; title is undefined
+  // when the text doesn't carry one.
+  function parse(text) {
+    var p = text.match(/[#&?]p=([0-9.]{81})(?![0-9.])/);
+    var t = text.match(/[#&?]t=([^&\s]*)/);
+    if (p || t) {
+      var name = '';
+      try { name = t ? decodeURIComponent(t[1]) : ''; } catch (e) { /* malformed: no title */ }
+      return { cells: p ? p[1] : '', title: name };
+    }
+    var plain = text.replace(/\s+/g, '');
+    return /^[0-9.]{81}$/.test(plain) ? { cells: plain } : null;
+  }
+
+  function apply(data) {
+    cells.forEach(function (c, i) {
+      var v = data.cells.charAt(i);
+      c.value = /[1-9]/.test(v) ? v : '';
+    });
+    if (data.title !== undefined) title.value = data.title;
+    typedFrom = null;
+    typedRun = 0;
+    save();
   }
 
   function load() {
+    // A puzzle in the link takes priority over whatever was saved last time
+    var linked = location.hash.length > 1 && parse(location.hash);
+    if (linked) { apply(linked); return; }
     try {
       var data = JSON.parse(localStorage.getItem(STORAGE_KEY));
       if (!data) return;
@@ -298,6 +354,65 @@
 
   document.getElementById('print').addEventListener('click', function () {
     window.print();
+  });
+
+  function flash(button, message) {
+    var label = button.textContent;
+    button.textContent = message;
+    button.disabled = true;
+    setTimeout(function () { button.textContent = label; button.disabled = false; }, 1200);
+  }
+
+  function copy(text, button) {
+    function manual() { prompt('Copy this:', text); }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { flash(button, 'Copied'); }, manual);
+    } else {
+      manual();
+    }
+  }
+
+  function pasteText(text) {
+    if (text === null) return;                    // prompt was cancelled
+    var data = parse(text);
+    if (data) {
+      apply(data);
+      focusCell(0);
+    } else {
+      alert('That doesn\'t look like a puzzle. Paste 81 characters (1-9, with 0 or . for empty squares) or a link copied from this page.');
+    }
+  }
+
+  document.getElementById('copy-link').addEventListener('click', function () {
+    copy(linkText(), this);
+  });
+
+  document.getElementById('copy-text').addEventListener('click', function () {
+    copy(puzzleText(), this);
+  });
+
+  document.getElementById('paste').addEventListener('click', function () {
+    function manual() { pasteText(prompt('Paste a puzzle (81 characters) or a link:')); }
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      navigator.clipboard.readText().then(pasteText, manual);
+    } else {
+      manual();
+    }
+  });
+
+  // Ctrl+V anywhere on the page: load it if it's a whole puzzle or a link
+  document.addEventListener('paste', function (e) {
+    var text = (e.clipboardData || window.clipboardData).getData('text');
+    var data = text && parse(text);
+    if (!data) return;                            // ordinary paste
+    e.preventDefault();
+    apply(data);
+  });
+
+  // Following a link to another puzzle while the page is already open
+  window.addEventListener('hashchange', function () {
+    var data = location.hash.length > 1 && parse(location.hash);
+    if (data) apply(data);
   });
 
   document.getElementById('clear').addEventListener('click', function () {
