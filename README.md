@@ -4,7 +4,7 @@ A printable Sudoku template in a single HTML file, with no dependencies and no b
 
 ## Usage
 
-Open [index.html](index.html) in any modern browser.
+It is hosted at [sudoku.kitten-x.com](https://sudoku.kitten-x.com), or you can open [index.html](index.html) directly in any modern browser.
 
 - Click a square and type `1`–`9` to fill it in. Typing over a number replaces it. The cursor then moves to the next square, carrying on to the start of the next row at the end of a row.
 - Use the arrow keys to move around the grid. Left and right wrap onto the previous or next row; up and down wrap to the other end of the same column.
