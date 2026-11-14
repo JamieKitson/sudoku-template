@@ -29,6 +29,6 @@ A puzzle in the link takes priority over the one remembered in local storage.
 
 ## Printing
 
-Press **Print** (or `Ctrl`+`P`). The page is set up for A4 portrait with 15 mm margins, and the grid prints at the top of the page at 144 mm square, giving 16 mm squares with room to write in pencil marks. The buttons and instructions are not printed.
+Press **Print** (or `Ctrl`+`P`). The page is set up for A4 portrait with 15 mm margins, and the grid prints at the top of the page at 108 mm square, giving 12 mm squares. Together with the title it fits in the top half of the sheet, leaving the bottom half free. The buttons and instructions are not printed.
 
 For the intended size, leave the print dialog's scale at 100% and margins at "Default". Leave the grid empty to print a blank template, or enter a puzzle's starting numbers first.

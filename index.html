@@ -133,19 +133,22 @@
 
     .toolbar, .hint { display: none; }
 
-    /* 144mm grid = 16mm cells, at the top of the page, centred horizontally */
+    /* 108mm grid = 12mm cells, at the top of the page, centred horizontally.
+       With the 15mm top margin and a title it ends about 135mm down, inside
+       the top half of an A4 sheet (148.5mm). */
     .sheet {
-      --size: 144mm;
+      --size: 108mm;
       --thin: 0.3mm;
       --thick: 0.9mm;
       --thin-line: #000;
       margin: 0 auto;
-      gap: 6mm;
+      gap: 4mm;
     }
 
     .title {
       border: none;
-      font-size: 18pt;
+      font-size: 14pt;
+      padding: 0;
     }
     .title:placeholder-shown { display: none; }
 
